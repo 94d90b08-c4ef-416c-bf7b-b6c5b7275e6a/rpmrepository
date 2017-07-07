@@ -1,6 +1,6 @@
 RPM Module
 ==========
-Module provides some functionality to manipulate with RPM packages and repositories  
+Module provides some functionality to manipulate with RPM [packages](README.md\#package) and [repositories](README.md\#repository)  
 God, forgive us!  
 
 Reason
@@ -20,7 +20,56 @@ But other distributives and packagers may not follow convention
 
 Usage
 -----
-See test scripts for moar  
+### Deal with Package
+``` ruby
+require 'rpm'
+pkg1 = RPM::Package.new ("http://mirror.centos.org/centos/6/os/x86_64/Packages/NetworkManager-devel-0.8.1-113.el6.i686.rpm")
+#Or like this
+require 'uri'
+pkg2 = RPM::Package.new URI("http://mirror.centos.org/centos/6/os/x86_64/Packages/NetworkManager-devel-0.8.1-113.el6.i686.rpm")
+#This is different objects
+p pkg1 == pkg2 #false
+#But the same packages
+p pkg1.same_as? pkg2 #true
+#Print default file name - may not actual file name
+p pkg1.get_default_name
+#Get this file to local machine
+p pkg1.duplicate_to '.'
+#Now we have this package locally
+p Dir.new('.').entries
+#And there are two URI
+p pkg1.uris
+#And we can remove it
+pkg1.deduplicate_undo '.'
+#And now it disappears
+p Dir.new('.').entries
+p pkg1.uris
+```
+### Deal with Repository
+``` ruby
+require 'rpm'
+#Create new repository
+repo = RPM::Repository.new '/tmp/new_repo', 'repo_name'
+#It creates repository undo directory /tmp/new_repo
+p Dir.new('/tmp/new_repo').entries
+#Two package to add
+pkg1 = RPM::Package.new "http://mirror.centos.org/centos/6/os/x86_64/Packages/NetworkManager-devel-0.8.1-113.el6.i686.rpm"
+pkg2 = RPM::Package.new 'http://mirror.centos.org/centos/6/os/x86_64/Packages/GConf2-gtk-2.28.0-7.el6.x86_64.rpm'
+#Now add them
+repo.add_packages! [pkg1,pkg2]
+#It duplicates specified packages into directory
+p pkg1.uris
+#Try to find package by regular expression - return URI, not package
+p repo.get_package_list_by /^Net/
+#Then remove it
+p repo.parse_out_pkgs! /^Net/
+p repo.get_pkg_list
+#Now remove whole repository
+repo.destroy!
+p File.directory? '/tmp/new_repo' #false
+```
+
+See [test scripts](test) for moar  
 
 Structure description
 ---------------------
@@ -51,9 +100,9 @@ Testing
 Test environment configuration - *test/env_test.rb*  
 Each class has own test script like `test/rpm_<entity>_test.rb`  
 where *entity* is one of:  
-- package  
-- repository  
-- repofactory  
+- [package](test/rpm_package_test.rb)  
+- [repository](test/rpm_repository_test.rb)  
+- [repofactory](test/rpm_repofactory_test.rb)  
 
 TODOs
 -----
