@@ -106,7 +106,6 @@ where *entity* is one of:
 
 TODOs
 -----
-- RepoFactory: check repository names for unique
 - package sroup supporting (comps)
 - remove repository uid, use name instead
 - add repositpory locking
