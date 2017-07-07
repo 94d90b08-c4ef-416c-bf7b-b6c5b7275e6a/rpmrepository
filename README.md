@@ -1,26 +1,26 @@
 RPM Module
 ==========
-Module provides some functianality to manipulate with RPM packages and repositories  
+Module provides some functionality to manipulate with RPM packages and repositories  
 God, forgive us!  
 
 Reason
 ------
 Maybe there are many tools  
 But noone deal with server side:  
-- how to create repository?
-- manage it (add packages, remove them)?
-- get some metadate (package count, total size, rebuilding history)
+- how to create repository?  
+- manage it (add packages, remove them)?  
+- get some metadata (package count, total size, rebuilding history)  
 So, here we go ... unfortunately  
 
 Convention
 ----------
 All this made on **CentOS** and for **CentOS**  
-Maybe some classes usable without any restriction  
+Maybe some classes usable without any restrictions  
 But other distributives and packagers may not follow convention  
 
 Usage
 -----
-See test scripts  
+See test scripts for moar  
 
 Structure description
 ---------------------
