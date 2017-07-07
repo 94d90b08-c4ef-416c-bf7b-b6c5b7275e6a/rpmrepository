@@ -106,10 +106,10 @@ where *entity* is one of:
 
 TODOs
 -----
-- package sroup supporting (comps)
+- package group supporting (comps)
 - remove repository uid, use name instead
 - add repositpory locking
 - add parallel tests
-- safe destrouyed repository from acts
-- rewrite repository interface with strong argument checks
+- safe destroyed repository from acts
+- **rewrite repository interface with strong argument checks**
 - use contains? + same_as? + (de)duplicate_undo for package-related repository operations
