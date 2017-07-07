@@ -32,7 +32,7 @@ describe 'RPM Repository creation' do
         
         it 'should has correct attributes' do
             @repository.name.must_be_instance_of String
-            @repository.uid.must_be_instance_of String
+            -> {@repository.uid}.must_raise Exception
             @repository.base_dir.must_be_instance_of Dir
             @repository.tmp_dir.must_be_instance_of Dir
             @repository.status.must_be_nil

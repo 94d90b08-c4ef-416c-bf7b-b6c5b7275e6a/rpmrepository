@@ -4,7 +4,6 @@ module RPM
     
     class Repository
         
-        attr_reader :uid
         attr_reader :base_dir
         attr_reader :status
         attr_reader :tmp_dir
@@ -14,8 +13,6 @@ module RPM
         def initialize base_dir, name = 'YUM Repository', rebuild_args = ""
             @locker = Mutex.new
             @locker.synchronize {
-                #Repo UID
-                @uid = SecureRandom.uuid
                 #Human-readable repo name (default here, but available from the outside)
                 @name = name
                 #Logging
@@ -138,7 +135,7 @@ module RPM
         #Return template for YUM configuration
         def get_local_conf
             "
-            [#{@uid}]
+            [#{@name}]
             name=#{@name}
             baseurl=file:///#{@base_dir.path}
             gpgcheck=0
@@ -168,7 +165,7 @@ module RPM
                 @status = :rebuilding
                 #TODO: add group file to rebuilding
                 unless system "createrepo -v --profile --update #{@base_dir.path} #{args} #{@extended_rebuild_args} -s #{get_checksum_type} &> '#{@tmp_dir.path}/rebuild-#{Time.now.to_s}'"
-                    raise RuntimeError, "Can't rebuild repository #{@uid}"
+                    raise RuntimeError, "Can't rebuild repository #{@name}"
                 end
                 @status = nil
             }
