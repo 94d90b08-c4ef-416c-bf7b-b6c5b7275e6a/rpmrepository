@@ -49,20 +49,17 @@ Wrap over Array of RPM::Repository
 Testing
 -------
 [Minitest](https://github.com/seattlerb/minitest) uses  
-Test environment configuration - *test/env_test.rb*  
-Each class has own test script like `test/rpm_<entity>_test.rb`  
-where *entity* is one of:  
-- [package](test/rpm_package_test.rb)  
-- [repository](test/rpm_repository_test.rb)  
-- [repofactory](test/rpm_repofactory_test.rb)  
+Test environment configuration [here](test/env.rb)  
+Testing scripts:  
+- [package](test/package.rb)  
+- [repository](test/repository.rb)  
+- [repofactory](test/repofactory.rb)  
 
 TODOs
 -----
 - package group supporting (comps)
-- remove repository uid, use name instead
 - add repositpory locking
 - add parallel tests
 - safe destroyed repository from acts
-- **rewrite repository interface with strong argument checks**
-- **use (de)duplicate_undo for package delition from repository**
+- use (de)duplicate_undo for package delition from repository
 - split abstract Repository from it's metadata (two classes)
