@@ -60,10 +60,10 @@ repo.add_packages! [pkg1,pkg2]
 #It duplicates specified packages into directory
 p pkg1.uris
 #Try to find package by regular expression - return URI, not package
-p repo.get_package_list_by /^Net/
+p repo.get_packages_list_by /^Net/
 #Then remove it
-p repo.parse_out_pkgs! /^Net/
-p repo.get_pkg_list
+p repo.parse_out_packages! /^Net/
+p repo.get_packages_list
 #Now remove whole repository
 repo.destroy!
 p File.directory? '/tmp/new_repo' #false
@@ -106,10 +106,11 @@ where *entity* is one of:
 
 TODOs
 -----
-- package sroup supporting (comps)
+- package group supporting (comps)
 - remove repository uid, use name instead
 - add repositpory locking
 - add parallel tests
-- safe destrouyed repository from acts
-- rewrite repository interface with strong argument checks
-- use contains? + same_as? + (de)duplicate_undo for package-related repository operations
+- safe destroyed repository from acts
+- **rewrite repository interface with strong argument checks**
+- **use (de)duplicate_undo for package delition from repository**
+- split abstract Repository from it's metadata (two classes)

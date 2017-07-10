@@ -5,7 +5,7 @@ require 'fileutils'
 require 'uri'
 
 puts "Loading testing environment"
-require_relative 'env_test'
+require_relative 'env'
 
 describe 'RPM Repository creation' do
     
@@ -61,31 +61,36 @@ describe 'RPM Repository creation' do
                 @victim = @packages.sample
                 @repository.add_package! @victim
                 @victim_location = @victim.get_local_uris_undo(@repository.base_dir.path).first
+                @victim_copy = RPM::Package.new @victim.uris.sample
             end
             
             it 'should be added to repository' do
                 File.file?(@victim_location.path).must_equal true
-                @repository.get_pkg_list.select { |pkg|
+                @repository.get_packages_list.select { |pkg|
                     pkg.get_local_uris_undo(@repository.base_dir.path).first == @victim_location
                 }.wont_be_empty
             end
             
             it 'should be alone' do
-                @repository.get_pkg_list.count.must_equal 1
+                @repository.get_packages_list.count.must_equal 1
             end
             
             it 'should not be alien' do
                 @repository.contains? @victim
             end
             
+            it 'should has URI in repository' do
+                @repository.send(:get_own_uri, @victim).must_equal @victim_location
+            end
+            
             describe 'package deletion' do
                 
                 before do
-                    @repository.remove_package!(@victim_location).must_equal true
+                    @repository.remove_package!(@victim_copy).must_equal true
                 end
                 
                 it 'should be removed' do
-                    @repository.get_pkg_list.must_be_empty
+                    @repository.get_packages_list.must_be_empty
                 end
                 
             end
@@ -97,7 +102,7 @@ describe 'RPM Repository creation' do
                 end
                 
                 it 'should not remove package' do
-                    @repository.get_pkg_list.count.must_equal 1
+                    @repository.get_packages_list.count.must_equal 1
                 end
                 
             end
@@ -108,11 +113,11 @@ describe 'RPM Repository creation' do
             
             before do
                 @repository.add_packages! @packages
-                @repo_packages_list = @repository.get_pkg_list
+                @repo_packages_list = @repository.get_packages_list
             end
             
             it 'should return similar packages' do
-                @repository.get_pkg_list.must_equal @repo_packages_list
+                @repository.get_packages_list.must_equal @repo_packages_list
             end
             
             describe 'dry rebuild' do
@@ -121,7 +126,7 @@ describe 'RPM Repository creation' do
                 end
                 
                 it 'anyway should return similar packages' do
-                    @repository.get_pkg_list.must_equal @repo_packages_list
+                    @repository.get_packages_list.must_equal @repo_packages_list
                 end
             end
             
@@ -145,27 +150,27 @@ describe 'RPM Repository creation' do
             
             describe 'package duplication' do
                 before do
-                    @repository.add_package! @packages.last
+                    -> {@repository.add_package! @packages.last}.must_raise RuntimeError
                 end
                 it 'should not be added' do
-                    @repository.get_pkg_list.count.must_equal @repo_packages_list.count
+                    @repository.get_packages_list.count.must_equal @repo_packages_list.count
                 end
             end
             
             describe 'packages removal' do
                 
                 before do
-                    @packages_uris_to_remove = @packages[0..2].collect { |pkg| pkg.uris.last };
-                    @packages_remove_rezult = @repository.remove_packages! @packages_uris_to_remove
-                    @packages_list_after_removal = @repository.get_pkg_list
+                    @packages_to_remove = @packages[0..2]
+                    @packages_remove_rezult = @repository.remove_packages! @packages_to_remove
+                    @packages_list_after_removal = @repository.get_packages_list
                 end
                 
                 it 'should contain correct packages count' do
-                    @repository.get_pkg_list.count.must_equal @packages.count - @packages_uris_to_remove.count
+                    @repository.get_packages_list.count.must_equal @packages.count - @packages_to_remove.count
                 end
                 
                 it 'should remove every package' do
-                    @packages_remove_rezult[:removed].count.must_equal @packages_uris_to_remove.count
+                    @packages_remove_rezult[:removed].count.must_equal @packages_to_remove.count
                     @packages_remove_rezult[:skipped].must_be_empty
                 end
                 
@@ -185,9 +190,9 @@ describe 'RPM Repository creation' do
             describe 'incorrect packages removal' do
                 
                 before do
-                    @packages_uris_to_remove = @packages[0..2].collect { |pkg| pkg.uris.last } +
-                        ['/a/lot/of', '/incorrect/uris', '/and/one/correct', @packages.first.uris.last.path].collect {|str| URI::parse str};
-                    @packages_remove_rezult = @repository.remove_packages! @packages_uris_to_remove
+                    @packages_to_remove = @packages[0..2] +
+                        ['/a/lot/of', '/incorrect/uris', '/and/one/correct', @packages.first];
+                    @packages_remove_rezult = @repository.remove_packages! @packages_to_remove
                 end
                 
                 it { @packages_remove_rezult[:skipped].count.must_equal 4 }
@@ -199,16 +204,16 @@ describe 'RPM Repository creation' do
                 
                 before do
                     @full_name_pattern = @packages.sample.get_default_name
-                    @parsing_out_rezult = @repository.parse_out_pkgs! @full_name_pattern
+                    @parsing_out_rezult = @repository.parse_out_packages! @full_name_pattern
                 end
                 
                 it 'should be removed' do
-                    @repository.get_package_list_by(@full_name_pattern).must_be_empty
-                    @repository.get_pkg_list.count.must_equal @packages.count - 1
+                    @repository.get_packages_list_by(@full_name_pattern).must_be_empty
+                    @repository.get_packages_list.count.must_equal @packages.count - 1
                 end
                 
                 it 'should be mentioned at rezult' do
-                    File::basename(@parsing_out_rezult[:removed].first.path).must_equal @full_name_pattern
+                    File::basename(@parsing_out_rezult[:removed].first.get_default_name).must_equal @full_name_pattern
                 end
                 
                 it 'should not skip any' do
@@ -225,13 +230,13 @@ describe 'RPM Repository creation' do
                 end
                 
                 it "should found packages" do
-                    @repository.get_package_list_by(@name_pattern).count.must_equal @assume_match_packages_count
+                    @repository.get_packages_list_by(@name_pattern).count.must_equal @assume_match_packages_count
                 end
                 
                 describe 'parsing out finded packages' do
                     
                     before do
-                        @parsing_out_rezult = @repository.parse_out_pkgs! @name_pattern
+                        @parsing_out_rezult = @repository.parse_out_packages! @name_pattern
                     end
                     
                     it "should parse packages" do
@@ -240,11 +245,11 @@ describe 'RPM Repository creation' do
                     end
                     
                     it 'should not remove other packages' do
-                        @repository.get_pkg_list.count.must_equal @packages.count - @assume_match_packages_count
+                        @repository.get_packages_list.count.must_equal @packages.count - @assume_match_packages_count
                     end
                     
                     it 'should not be findable after' do
-                        @repository.get_package_list_by(@name_pattern).must_be_empty
+                        @repository.get_packages_list_by(@name_pattern).must_be_empty
                     end
                     
                 end

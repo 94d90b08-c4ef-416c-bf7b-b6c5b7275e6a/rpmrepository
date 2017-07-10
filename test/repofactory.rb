@@ -5,7 +5,7 @@ require 'fileutils'
 require 'uri'
 
 puts "Loading testing environment"
-require_relative 'env_test'
+require_relative 'env'
 
 describe 'repository factory' do
     
@@ -13,7 +13,7 @@ describe 'repository factory' do
         packages = REMOTE_URIS.collect { |uri| RPM::Package.new uri  }
         @main_repo = RPM::Repository.new File::expand_path './tmp/-1'
         @main_repo.add_packages! packages
-        @packages = @main_repo.get_pkg_list
+        @packages = @main_repo.get_packages_list
         @repositories = (0..(5..9).to_a.sample).to_a.collect { |repo_id| 
             repo = RPM::Repository.new File::expand_path "./tmp/#{repo_id}"
             repo.add_packages! @packages.sample (1..3).to_a.sample
@@ -91,6 +91,7 @@ describe 'repository factory' do
             repo.destroy!
         }
         @main_repo.destroy!
+        @alien_repository.destroy!
     end
     
 end
