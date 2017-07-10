@@ -112,4 +112,5 @@ TODOs
 - add parallel tests
 - safe destroyed repository from acts
 - **rewrite repository interface with strong argument checks**
-- use contains? + same_as? + (de)duplicate_undo for package-related repository operations
+- **use contains? + same_as? + (de)duplicate_undo for package-related repository operations**
+- split abstract Repository from it's metadata (two classes)

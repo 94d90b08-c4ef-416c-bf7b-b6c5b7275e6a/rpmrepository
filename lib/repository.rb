@@ -45,73 +45,78 @@ module RPM
     
     #Package magic
     
-    #Add packages to repository by URL (may be file or http source)
-    def add_package! pkg
-      add_packages! [pkg]
+    #Add single package to repository
+    def add_package! package
+      add_packages! [package]
     end
     
-    def add_packages! pkgs
+    #Add packages to repository
+    def add_packages! packages
       @logger.info "adding packages"
       duplicated_packages = []
+      packages.each { |package|
+       raise ArgumentError, "Package expected, but #{package.class}" unless package.is_a? RPM::Package
+       raise RuntimeError, "Package already exist!" if contains? package
+      }
       rebuild_with {
-        pkgs.each { |pkg|
-          pkg.duplicate_to "#{@base_dir.path}/Packages" if pkg.get_local_uris_undo(@base_dir.path).empty?
-          duplicated_packages.push pkg
+        packages.each { |package|
+          package.duplicate_to "#{@base_dir.path}/Packages"
+          duplicated_packages.push package
         }
       }
     rescue Exception => e
       rebuild_with {
-        duplicated_packages.each { |pkg|
-          pkg.deduplicate_undo "#{@base_dir.path}/Packages"
+        duplicated_packages.each { |package|
+          package.deduplicate_undo "#{@base_dir.path}/Packages"
         }
       }
       raise e
     end
     
-    #Remove pkg by URL strings
-    def remove_package! pkg_url
+    #Remove package
+    def remove_package! package
       @logger.info "removing package"
-      raise ArgumentError, "No such package in repository: #{pkg_url.to_s}" if get_pkg_list.select{|pkg| pkg.get_local_uris_undo(@base_dir.path).first == pkg_url}.empty?
-      rebuild_with("-x #{pkg_url.to_s}"){
-        FileUtils::remove "#{pkg_url.path}" if File.exist? pkg_url.path
+      raise ArgumentError, "No such package in repository: #{package.get_default_name}" unless contains? package
+      rebuild_with("-x #{get_own_uri(package).to_s}"){
+        FileUtils::remove get_own_uri(package).path
       }
     end
     
-    #Remove pkgs by url string list
-    #Return two arrays: removed and skipped packages
-    def remove_packages! pkgs_urls
+    #Remove packages
+    #Return two arrays: {:removed => [...], :skipped => [...]}
+    def remove_packages! packages
       @logger.info "removing packages"
       rezult = {:removed => [], :skipped => []}
-      current_pkg_list = get_pkg_list
       @locker.synchronize {
-        pkgs_urls.each { |pkg_url|
-          if current_pkg_list.select{|pkg| pkg.get_local_uris_undo(@base_dir.path).first == pkg_url}.empty?
-            rezult[:skipped].push pkg_url
-            @logger.warn "Package #{pkg_url} skipped while removal"
+        packages.each { |package|
+          #contains? is unsafe for transpatrent repository state: file existance check required
+          if contains? package and File.exist? get_own_uri(package).path
+            rezult[:removed].push package
+            FileUtils::remove get_own_uri(package).path
           else
-            rezult[:removed].push pkg_url
-            FileUtils::remove "#{pkg_url.path}" if File.exist? pkg_url.path
+            rezult[:skipped].push package
+            @logger.warn "Package #{package} skipped: no such package in repository"
           end
         }
       }
-      rebuild_with rezult[:removed].collect{|pkg_url|"-x #{pkg_url.to_s}"}.join(' ')
+      rebuild_with rezult[:removed].collect{|package|"-x #{get_own_uri(package).to_s}"}.join(' ')
       return rezult
     end
     
     #Remove packages by regex
     #Return list with removed URL's
-    def parse_out_pkgs! pkg_name_expr
-      return remove_packages! get_package_list_by(pkg_name_expr)
+    def parse_out_packages! name_expression
+      return remove_packages! get_packages_list_by(name_expression)
     end
     
-    #Return package URL's array that match parameter
-    def get_package_list_by pkg_name_expr
-      get_pkg_list.select{ |pkg| pkg.get_default_name[pkg_name_expr] }.collect{|pkg| pkg.get_local_uris_undo(@base_dir.path).first }
+    #Return packages array that match parameter
+    def get_packages_list_by name_expression
+      get_packages_list.select{ |package| package.get_default_name[name_expression] }
     end
     
-    #return true if repository contains package with same signature
-    def contains? alien_pkg
-      not get_pkg_list.select{ |pkg| pkg.same_as? alien_pkg }.empty?
+    #Return true if repository contains package with same signature
+    def contains? alien_package
+      not get_packages_list.select{ |package| package.same_as? alien_package }.empty?
     end
     
     #Remove repository files
@@ -143,8 +148,8 @@ module RPM
       "
     end
     
-    #return pkgs list
-    def get_pkg_list
+    #return list of packages
+    def get_packages_list
       refresh_pkg_cache
       get_packages_from_cache
     end
@@ -155,7 +160,19 @@ module RPM
     end
     
   private
-  
+    
+    #Return Package URI in current repository
+    def get_own_uri package
+      same_packages = get_packages_list.select { |repo_package| repo_package.same_as? package }
+      case same_packages.count
+      when 1
+        return (same_packages.first.get_local_uris_undo "#{@base_dir.path}/Packages").first
+      when 0
+        return nil
+      else
+        raise RuntimeError, "More than one #{package.get_default_name} package in repository"
+      end
+    end
     #rebuild repository by current configuration with additional args and block
     #all synced
     def rebuild_with args = ""
@@ -182,7 +199,18 @@ module RPM
     #Check that current package list cache valid. if not - validate
     def refresh_pkg_cache
       @logger.debug "refreshing packages cache info"
-      @locker.synchronize {
+      if @locker.locked?
+        unless @locker.owned?
+          while @locker.locked?
+            sleep 10
+          end
+          @locker.lock
+          self_lock = true
+        end
+      else
+        @locker.lock
+        self_lock = true
+      end
         if repomd_cache_hit?
           @logger.debug "MD cache hit"
           return true
@@ -214,7 +242,8 @@ module RPM
           @logger.debug 'package cache refreshed'
           return true
         end
-      }
+    ensure
+      @locker.unlock if @locker.owned? and self_lock
     end
     
     #metadata workhouse
