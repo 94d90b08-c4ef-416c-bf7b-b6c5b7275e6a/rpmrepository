@@ -5,7 +5,7 @@ require 'fileutils'
 require 'uri'
 
 puts "Loading testing environment"
-require_relative 'env_test'
+require_relative 'env'
 
 describe 'RPM Repository creation' do
     

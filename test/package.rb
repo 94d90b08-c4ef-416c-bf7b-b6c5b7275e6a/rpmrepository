@@ -4,7 +4,7 @@ require 'minitest/autorun'
 require 'fileutils'
 
 puts "Loading testing environment"
-require_relative 'env_test'
+require_relative 'env'
 
 describe 'RPM Package' do
     
