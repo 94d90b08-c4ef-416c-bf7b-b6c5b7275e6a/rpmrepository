@@ -54,12 +54,10 @@ module RPM
     def add_packages! packages
       @logger.info "adding packages"
       duplicated_packages = []
-      packages.each { |package|
-       raise ArgumentError, "Package expected, but #{package.class}" unless package.is_a? RPM::Package
-       raise RuntimeError, "Package already exist!" if contains? package
-      }
       rebuild_with {
         packages.each { |package|
+          raise ArgumentError, "Package expected, but #{package.class}" unless package.is_a? RPM::Package
+          raise RuntimeError, "Package already exist!" if contains? package
           package.duplicate_to "#{@base_dir.path}/Packages"
           duplicated_packages.push package
         }
@@ -76,8 +74,8 @@ module RPM
     #Remove package
     def remove_package! package
       @logger.info "removing package"
-      raise ArgumentError, "No such package in repository: #{package.get_default_name}" unless contains? package
       rebuild_with("-x #{get_own_uri(package).to_s}"){
+        raise ArgumentError, "No such package in repository: #{package.get_default_name}" unless contains? package
         FileUtils::remove get_own_uri(package).path
       }
     end
