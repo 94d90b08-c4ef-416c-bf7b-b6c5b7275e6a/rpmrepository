@@ -13,6 +13,7 @@ describe 'RPM Repository creation' do
         @remote_uris = REMOTE_URIS
         @packages = @remote_uris.collect { |uri| RPM::Package.new uri  }
         @base_dir = File::expand_path './tmp'
+        @base_dir2 = File::expand_path './tmp2'
     end
     
     it 'should be creatable without base_dir' do
@@ -28,6 +29,11 @@ describe 'RPM Repository creation' do
         
         before do
             @repository = RPM::Repository.new @base_dir
+            @repository2 = RPM::Repository.new @base_dir2
+        end
+        
+        it 'should has different uniq names' do
+          (@repository.name == @repository2.name).must_equal false
         end
         
         it 'should has correct attributes' do
@@ -35,7 +41,7 @@ describe 'RPM Repository creation' do
             -> {@repository.uid}.must_raise Exception
             @repository.base_dir.must_be_instance_of Dir
             @repository.tmp_dir.must_be_instance_of Dir
-            @repository.status.must_be_nil
+            @repository.status.must_equal :ok
         end
         
         it 'should has correct layout' do
@@ -260,10 +266,22 @@ describe 'RPM Repository creation' do
         
         describe 'destructive tests' do
             
-            it 'should be removable' do
-                @repository.destroy!
-                (File.exist? @repository.base_dir).must_equal false
+            before do
+              @repository.destroy!
+              @repository2.destroy!
             end
+            
+            it 'should be destroyed' do
+                (File.exist? @repository.base_dir).must_equal false
+                @repository.status.must_equal :destroyed
+                (File.exist? @repository2.base_dir).must_equal false
+                @repository2.status.must_equal :destroyed
+            end
+            
+#            it 'should not be usable' do
+#            
+#            
+#            end
             
         end
         
@@ -271,5 +289,6 @@ describe 'RPM Repository creation' do
     
     after do
         FileUtils::rm_rf @base_dir
+        FileUtils::rm_rf @base_dir2
     end
 end

@@ -58,8 +58,7 @@ Testing scripts:
 TODOs
 -----
 - package group supporting (comps)
-- add repositpory locking
+- add repository locking (for other processes)
 - add parallel tests
 - safe destroyed repository from acts
 - use (de)duplicate_undo for package delition from repository
-- split abstract Repository from it's metadata (two classes)
