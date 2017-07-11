@@ -1,7 +1,7 @@
 #Local RPM repository with packages
 
 module RPM
-  class Repository
+  class Repository < Monitor
     
     attr_reader :base_dir
     attr_reader :status
@@ -19,7 +19,8 @@ module RPM
     
     #Init repository in specified directory
     def initialize base_dir, name = SecureRandom.uuid, rebuild_args = ""
-      @locker = Mutex.new
+      #Call Monitor's contructor to initialize it
+      super()
       synchronize {
         @status = :initializing
         #Human-readable repo name (default here, but available from the outside)
@@ -54,6 +55,9 @@ module RPM
       }
     end
     
+    #include MonitorMixin
+    
+    #Include substructures
     include RPM::Repository::Metadata
     include RPM::Repository::Caching
     include RPM::Repository::API
@@ -73,28 +77,28 @@ module RPM
       end
     end
     
-    #Custom critical section
-    #Allow nested locks (if lock already owned by current thread)
-    #If locked by another - wait for it
-    def synchronize
-      if @locker.locked?
-        unless @locker.owned?
-          while @locker.locked?
-            sleep 10
-          end
-          @locker.lock
-          own_lock = true
-        else
-          own_lock = false
-        end
-      else
-        @locker.lock
-        own_lock = true
-      end
-      yield if block_given?
-    ensure
-      @locker.unlock if @locker.owned? and own_lock
-    end
+#    #Custom critical section
+#    #Allow nested locks (if lock already owned by current thread)
+#    #If locked by another - wait for it
+#    def synchronize
+#      if @locker.locked?
+#        unless @locker.owned?
+#          while @locker.locked?
+#            sleep 10
+#          end
+#          @locker.lock
+#          own_lock = true
+#        else
+#          own_lock = false
+#        end
+#      else
+#        @locker.lock
+#        own_lock = true
+#      end
+#      yield if block_given?
+#    ensure
+#      @locker.unlock if @locker.owned? and own_lock
+#    end
   
   end
 end

@@ -2,7 +2,7 @@
 #Mix for RPM::Repository to work witn MD
 
 module RPM
-  class Repository
+  class Repository < Monitor
     module Metadata
     private
       

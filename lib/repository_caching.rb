@@ -2,7 +2,7 @@
 #Mix for RPM::Repository to realize MD in-memory caching
 
 module RPM
-  class Repository
+  class Repository < Monitor
     module Caching
     private
       
