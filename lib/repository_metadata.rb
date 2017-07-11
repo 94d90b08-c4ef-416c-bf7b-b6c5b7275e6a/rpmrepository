@@ -63,4 +63,10 @@ private
     end
   end
   
+  #MD-related initialization part
+  def initialization_metadata rebuild_args
+    #Default additional arguments for createrepo
+    @extended_rebuild_args = rebuild_args
+  end
+  
 end

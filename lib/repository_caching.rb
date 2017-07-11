@@ -68,4 +68,14 @@ private
       @logger.debug 'package cache refreshed'
   end
   
+  #Cache-related part of initialization
+  def initialization_cache
+    #cached and parsed main XML MD file - repomd.xml
+    @repomd_cache = nil
+    #cached and parsed other XML documents
+    @md_content_cache = { :primary => nil }
+    #Repository Packages cache. Format: checksum => RPM::Package
+    @packages_cache = {}
+  end
+  
 end

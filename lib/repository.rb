@@ -32,8 +32,6 @@ module RPM
         #Logging
         @logger = Logging.logger['repo ' + @name]
         @logger.debug 'initializing'
-        #Extended rebuild args
-        @extended_rebuild_args = rebuild_args
         #Local basic directory 
         raise ArgumentError, "Base directory must be non-relative" if base_dir.nil? or not base_dir[/^\/.+/]
         FileUtils::mkdir_p base_dir, { :mode => 0700 } unless Dir.exist? base_dir
@@ -44,16 +42,13 @@ module RPM
         @tmp_dir = Dir.new @base_dir.path + "/tmp"
         #Init repository
         FileUtils::mkdir "#{@base_dir.path}/Packages", { :mode => 0700 } unless @base_dir.entries.include? "Packages"
-        #Cache-related structures
-        #cached and parsed main XML MD
-        @repomd_cache = nil
-        #cached and parsed XML documents
-        @md_content_cache = { :primary => nil }
-        #checksum => RPM::Package
-        @packages_cache = {}
+        #Parts-relates initialization
+        initialization_metadata rebuild_args
+        initialization_cache
         @logger.info "initialized"
+        #Making MD
         rebuild
-        #cache warming
+        #Cache warming
         validate_packages_cache
         @status = :ok
       }
@@ -81,28 +76,5 @@ module RPM
       end
     end
     
-#    #Custom critical section
-#    #Allow nested locks (if lock already owned by current thread)
-#    #If locked by another - wait for it
-#    def synchronize
-#      if @locker.locked?
-#        unless @locker.owned?
-#          while @locker.locked?
-#            sleep 10
-#          end
-#          @locker.lock
-#          own_lock = true
-#        else
-#          own_lock = false
-#        end
-#      else
-#        @locker.lock
-#        own_lock = true
-#      end
-#      yield if block_given?
-#    ensure
-#      @locker.unlock if @locker.owned? and own_lock
-#    end
-  
   end
 end
