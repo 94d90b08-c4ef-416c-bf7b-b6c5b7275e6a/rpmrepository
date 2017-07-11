@@ -3,6 +3,10 @@
 module RPM
   class Repository < Monitor
     
+    require_relative 'repository_api'
+    require_relative 'repository_caching'
+    require_relative 'repository_metadata'
+    
     attr_reader :base_dir
     attr_reader :status
     attr_reader :tmp_dir
