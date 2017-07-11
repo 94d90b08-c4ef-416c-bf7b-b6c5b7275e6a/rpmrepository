@@ -11,6 +11,7 @@ module RPM
         attr_reader :architecture
         attr_reader :size
         attr_reader :file_size
+        attr_reader :digests
 
         def initialize raw_uri
             super()
@@ -29,17 +30,17 @@ module RPM
               else
                   raise ArgumentError, "Unreachable URI provided: #{uri.to_s}"
               end
-              get_attributes uri
               @uris.push uri
+              get_attributes
             }
         end
         
-        def duplicate_to dst_dir
+        def duplicate_to dst_dir, file_name = get_default_name
             if dst_dir[/^\..*/]
                 dst_dir = File::expand_path dst_dir
             end
             raise ArgumentError, "Path must be absolute (#{dst_dir})" unless dst_dir[/^\//]
-            target_uri = URI::parse "file:#{dst_dir}/#{get_default_name}"
+            target_uri = URI::parse "file:#{dst_dir}/#{file_name}"
             synchronize {
               return true if get_local_uris.include? target_uri
               if uri = get_local_uris.first and not uri.nil?
@@ -112,7 +113,8 @@ module RPM
             @name == other.name and
             @version == other.version and
             @release == other.release and
-            @architecture == other.architecture
+            @architecture == other.architecture and
+            @digests[:sha256] == other.digests[:sha256]
         end
         
         #Return expected RPM Package file name
@@ -144,29 +146,21 @@ module RPM
         end
         
     private
-        def get_attributes uri
-            #fix that rpm command supports only file:///1/2/3 not file:/1/2/3
-            rpm_uri = uri.dup
-            if rpm_uri.scheme == nil or uri.host == nil
-                rpm_uri.host = ''
-                rpm_uri.scheme = 'file'
-            end
-            @name, @version, @release, @architecture, @size = `rpm -q --queryformat '%{NAME} %{VERSION} %{RELEASE} %{ARCH} %{SIZE}' -p #{rpm_uri.to_s} 2> /dev/null`.split ' '
+        def get_attributes
+            tmp_file_dir = '/tmp/' + SecureRandom.uuid
+            tmp_file_name = tmp_file_dir + '/package.rpm'
+            FileUtils.mkdir tmp_file_dir
+            raise RuntimeError, "Can't get package to determine attributes" unless duplicate_to tmp_file_dir, 'package.rpm'
+            @name, @version, @release, @architecture, @size = `rpm -q --queryformat '%{NAME} %{VERSION} %{RELEASE} %{ARCH} %{SIZE}' -p #{tmp_file_name} 2> /dev/null`.split ' '
             if @name.nil? or @version.nil? or @release.nil? or @architecture.nil?
-                raise RuntimeError, "Can't parse name from #{rpm_uri.to_s} by rpm -q command"
+                raise RuntimeError, "Can't parse name from #{tmp_file_name} by rpm -q command"
             end
-            #calc RPM package file size
-            if uri.scheme == 'file' or uri.scheme == nil
-                raise RuntimeError, "Unexpected file #{uri.to_s} disappearing!" unless File.file? uri.path
-                @file_size = File.size uri.path
-            else
-                response = Net::HTTP.new(uri.host,uri.port).get(uri)
-                if response.is_a? Net::HTTPSuccess
-                    @file_size = response.body.size
-                else
-                    raise RuntimeError, "Can't GET #{uri.to_s} for size making"
-                end
-            end
+            raise RuntimeError, "Unexpected file #{tmp_file_name} disappearing!" unless File.file? tmp_file_name
+            @file_size = File.size tmp_file_name
+            @digests = { :sha1 => Digest::SHA1.hexdigest(File.read tmp_file_name), :sha256 => Digest::SHA256.hexdigest(File.read tmp_file_name) }
+        ensure
+            deduplicate_undo tmp_file_dir
+            FileUtils.rm_rf tmp_file_dir
         end
     end
     

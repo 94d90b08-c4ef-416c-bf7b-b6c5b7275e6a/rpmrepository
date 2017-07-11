@@ -38,6 +38,11 @@ describe 'RPM Package' do
         @package.file_size.must_be_instance_of Fixnum
     end
     
+    it 'should has sha1 and sha256 digests' do
+      @package.digests.must_be_instance_of Hash
+      @package.digests.keys.must_equal [:sha1, :sha256]
+    end
+    
     it 'should be the same' do
         (@package.same_as? RPM::Package.new @remote_uri).must_equal true
         (@package.same_as? RPM::Package.new (REMOTE_URIS - [@remote_uri]).sample).must_equal false

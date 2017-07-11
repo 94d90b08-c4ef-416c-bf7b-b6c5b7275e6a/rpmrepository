@@ -123,7 +123,7 @@ describe 'RPM Repository creation' do
             end
             
             it 'should return similar packages' do
-                @repository.get_packages_list.must_equal @repo_packages_list
+                @repository.get_packages_list.must_equal @packages
             end
             
             describe 'dry rebuild' do
@@ -132,7 +132,7 @@ describe 'RPM Repository creation' do
                 end
                 
                 it 'anyway should return similar packages' do
-                    @repository.get_packages_list.must_equal @repo_packages_list
+                    @repository.get_packages_list.must_equal @packages
                 end
             end
             
