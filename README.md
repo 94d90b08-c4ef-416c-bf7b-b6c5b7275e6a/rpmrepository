@@ -61,4 +61,5 @@ TODOs
 - add repository locking (for other processes)
 - add parallel tests
 - safe destroyed repository from acts
-- use (de)duplicate_undo for package delition from repository
+- add RPM::Repository.assimilate (join package with repositoried one if exist)
+- add RPM::Package.join - collect URIs from both packages if the same

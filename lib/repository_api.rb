@@ -32,9 +32,9 @@ module RPM::Repository::API
   #Remove package
   def remove_package! package
     @logger.info "removing package"
-    rebuild_with("-x #{get_own_uri(package).to_s}"){
+    rebuild_with {
       raise ArgumentError, "No such package in repository: #{package.get_default_name}" unless contains? package
-      FileUtils::remove get_own_uri(package).path
+      get_own(package).deduplicate_undo @base_dir.path
     }
   end
   
@@ -43,18 +43,16 @@ module RPM::Repository::API
   def remove_packages! packages
     @logger.info "removing packages"
     rezult = {:removed => [], :skipped => []}
-    synchronize {
+    rebuild_with {
       packages.each { |package|
-        #contains? is unsafe for transpatrent repository state: file existance check required
-        if contains? package and File.exist? get_own_uri(package).path
+        if contains? package
+          get_own(package).deduplicate_undo @base_dir.path
           rezult[:removed].push package
-          FileUtils::remove get_own_uri(package).path
         else
           rezult[:skipped].push package
           @logger.warn "Package #{package} skipped: no such package in repository"
         end
       }
-      rebuild_with rezult[:removed].collect{ |package| "-x #{get_own_uri(package).to_s}" }.join(' ')
     }
     return rezult
   end
@@ -112,6 +110,19 @@ module RPM::Repository::API
   #Return array of packages
   def get_packages_list
     synchronize { validate_packages_cache && get_packages_from_cache }
+  end
+  
+  #Return Package from current repository
+  def get_own package
+    same_packages = get_packages_list.select { |repo_package| repo_package.same_as? package }
+    case same_packages.count
+    when 1
+      return same_packages.first
+    when 0
+      return nil
+    else
+      raise RuntimeError, "More than one #{package.get_default_name} package in repository"
+    end
   end
   
   #Public and safe realization of rebuilding - just rebuild repository
