@@ -10,7 +10,7 @@ private
       yield if block_given?
       @status = :rebuilding
       #TODO: add group file to rebuilding
-      unless system "createrepo -v --profile --update #{@base_dir.path} #{args} #{@extended_rebuild_args} -s #{get_checksum_type} &> '#{@tmp_dir.path}/rebuild-#{Time.now.to_s}'"
+      unless system "createrepo -v --profile --update #{@base_dir.path} -s #{get_checksum_type} #{@extended_rebuild_args} #{args} &> '#{@tmp_dir.path}/rebuild-#{Time.now.to_s}'"
         raise RuntimeError, "Can't rebuild repository #{@name}"
       end
       @status = :ok

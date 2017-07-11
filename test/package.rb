@@ -44,6 +44,51 @@ describe 'RPM Package' do
         (@package.same_as? @remote_uri).must_equal false
     end
     
+    describe 'join tests' do
+        before do
+          (@package.duplicate_to '.').must_equal true
+          @origin_uris_count = @package.uris.count
+          @package_copy = RPM::Package.new @remote_uri
+          FileUtils.cp @package.get_local_uris.first.path, "/tmp/package2.rpm"
+          @package2 = RPM::Package.new '/tmp/package2.rpm'
+          @alien_remote_uri = (REMOTE_URIS - [@remote_uri]).sample
+          @alien_package = RPM::Package.new @alien_remote_uri
+        end
+        
+        it 'should not join alien package' do
+          (@package.join! @alien_package).must_equal false
+          @package.uris.count.must_equal @origin_uris_count
+        end
+        
+        it 'should join duplicated package without changes' do
+          (@package.join! @package_copy).must_equal true
+          @package.uris.count.must_equal @origin_uris_count
+        end
+        
+        it 'should join copied package with enlarging uris' do
+          (@package.join! @package2).must_equal true
+          @package.uris.count.must_equal (@origin_uris_count + 1)
+        end
+        
+        describe 'URI split brain' do
+          before do
+            @package_copy.join! @package
+            @package_copy.destroy!
+          end
+          
+          it 'split self brain if destroy package copy' do
+            @package.get_local_uris.count.must_equal 1
+            (File.exist? @package.get_local_uris.first.path).must_equal true
+          end
+          
+        end
+        
+        after do
+          @package.deduplicate_undo '.'
+          FileUtils.rm_f '/tmp/package2.rpm'
+        end
+    end
+    
     describe 'destructive tests' do
         before do
             @directories = [ './', './tmp', './tmp/2', './tmp2/' ]

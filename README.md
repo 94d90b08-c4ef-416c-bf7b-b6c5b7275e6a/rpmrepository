@@ -55,10 +55,11 @@ Testing scripts:
 - [repository](test/repository.rb)  
 - [repofactory](test/repofactory.rb)  
 
-TODOs
------
+TODO aka known issues
+---------------------
 - package group supporting (comps)
 - add repository locking (for other processes)
 - add parallel tests
 - safe destroyed repository from acts
-- use (de)duplicate_undo for package delition from repository
+- add RPM::Repository.assimilate (join package with repositoried one if exist)
+- suppose 2 RPM::Package has similar local source(s) URI(s). One is destroyed. What about another?

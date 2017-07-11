@@ -85,8 +85,8 @@ describe 'RPM Repository creation' do
                 @repository.contains? @victim
             end
             
-            it 'should has URI in repository' do
-                @repository.send(:get_own_uri, @victim).must_equal @victim_location
+            it 'should be in repository' do
+                (@repository.get_own(@victim_copy).same_as? @victim).must_equal true
             end
             
             describe 'package deletion' do
@@ -201,8 +201,8 @@ describe 'RPM Repository creation' do
                     @packages_remove_rezult = @repository.remove_packages! @packages_to_remove
                 end
                 
-                it { @packages_remove_rezult[:skipped].count.must_equal 4 }
-                it { @packages_remove_rezult[:removed].count.must_equal 3 }
+                it { @packages_remove_rezult[:skipped].count.must_equal 3 }
+                it { @packages_remove_rezult[:removed].count.must_equal 4 }
                 
             end
             
