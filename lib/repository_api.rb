@@ -17,6 +17,10 @@ module RPM::Repository::API
         raise ArgumentError, "Package expected, but #{package.class}" unless package.is_a? RPM::Package
         raise RuntimeError, "Package already exist!" if contains? package
         package.duplicate_to "#{@base_dir.path}/Packages"
+        #hack that add package to cache. Escape package brain splitting (two packages with the same file)
+        if package.digests[get_checksum_type.to_sym]
+          @packages_cache[package.digests[get_checksum_type.to_sym]] = package
+        end
         duplicated_packages.push package
       }
     }
