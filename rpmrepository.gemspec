@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'rpmrepository'
-  s.version     = '0.0.3'
+  s.version     = '0.1.0'
   s.summary     = "Deal with RPM Repository/Package"
   s.description = "Gem to create/manage RPM repository(ies)/package(s)"
   s.authors     = ["nothing"]
