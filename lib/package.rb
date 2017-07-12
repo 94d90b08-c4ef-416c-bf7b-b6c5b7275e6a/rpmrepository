@@ -15,9 +15,9 @@ module RPM
 
         def initialize raw_uri
             super()
-            synchronize {
-              @uris = []
-              raise ArgumentError, "Only String or URI" unless raw_uri.kind_of? String or raw_uri.kind_of? URI::Generic
+            @uris = []
+            synchronize! {
+              raise ArgumentError, "Only String or URI, not #{raw_uri.class}" unless raw_uri.kind_of? String or raw_uri.kind_of? URI::Generic
               if raw_uri.kind_of? URI::Generic
                   uri = raw_uri.dup
               else
@@ -41,7 +41,7 @@ module RPM
             end
             raise ArgumentError, "Path must be absolute (#{dst_dir})" unless dst_dir[/^\//]
             target_uri = URI::parse "file:#{dst_dir}/#{file_name}"
-            synchronize {
+            synchronize! {
               return true if get_local_uris.include? target_uri
               if uri = get_local_uris.first and not uri.nil?
                   raise Errno::EEXIST, "File #{File::basename target_uri.path} already exist!" if File.exist? target_uri.path
@@ -76,7 +76,7 @@ module RPM
         
         #Removes all URL's undo provided dir
         def deduplicate_undo dir
-            synchronize {
+            synchronize! {
               (get_local_uris_undo dir).each { |uri|
                   FileUtils::rm_f uri.path
                   @uris.delete uri
@@ -86,7 +86,7 @@ module RPM
         
         #Try to expand current package by other source uris
         def join! other_package
-          synchronize {
+          synchronize! {
             if same_as? other_package
               @uris += other_package.uris
               @uris.uniq!
@@ -99,7 +99,7 @@ module RPM
         
         #Remove each reachable uri
         def destroy!
-          synchronize {
+          synchronize! {
             get_local_uris.each { |victim|
                 FileUtils::rm_f victim.path
                 @uris.delete victim
@@ -130,22 +130,35 @@ module RPM
             unless dir[/.*\/$/]
                 dir = dir + '/'
             end
-            synchronize {
+            synchronize! {
               get_local_uris.select { |uri| uri.path[/^#{dir}/] }
             }
         end
         
         #Return every local uris
         def get_local_uris
-            synchronize { @uris.select { |uri| uri.scheme == nil or uri.scheme == "file" } }
+            synchronize! { @uris.select { |uri| uri.scheme == nil or uri.scheme == "file" } }
         end
         
         #Return every remote uris
         def get_remote_uris
-            synchronize { @uris.select { |uri| uri.scheme != nil and uri.scheme != "file" } }
+            synchronize! { @uris.select { |uri| uri.scheme != nil and uri.scheme != "file" } }
+        end
+        
+        #Try to repair package with broken local URIs
+        def repair!
+          synchronize {
+            @uris -= @uris.collect { |uri| (uri.scheme == 'file' or uri.scheme == nil) and not File.exist? uri.path }
+            if @uris.empty?
+              raise RuntimeError, 'Lack of URIs for curent package!'
+            else
+             return true
+            end
+          }
         end
         
     private
+        #Get RPM package attributes on package creation
         def get_attributes
             tmp_file_dir = '/tmp/' + SecureRandom.uuid
             tmp_file_name = tmp_file_dir + '/package.rpm'
@@ -162,6 +175,25 @@ module RPM
             deduplicate_undo tmp_file_dir
             FileUtils.rm_rf tmp_file_dir
         end
+        
+        #Check that local URIs point at actually exist file
+        def check_uris
+          @uris.each { |uri|
+            if (uri.scheme == 'file' or uri.scheme == nil) and not File.exist? uri.path
+              #MESSAGE MATTERS!
+              raise RuntimeError, "File #{uri.path} not exist, but mentioned in package"
+            end
+          }
+        end
+        
+        #Synchronize with useful check - enshure that every synced action preceeded with local uris check
+        def synchronize!
+          synchronize {
+            check_uris
+            yield if block_given?
+          }
+        end
+        
     end
     
 end

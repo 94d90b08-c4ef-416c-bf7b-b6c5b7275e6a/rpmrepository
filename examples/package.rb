@@ -16,6 +16,10 @@ p pkg1 == pkg2 #false
 puts  "But the same packages?"
 p pkg1.same_as? pkg2 #true
 
+puts "Join useless one and do not use it anymore"
+pkg1.join! pkg2
+p pkg1
+
 puts "Print default file name - may not actual file name"
 p pkg1.get_default_name
 
