@@ -33,6 +33,9 @@ Local RPM (YUM) repository with RPM Packages
 Repository support high-level actions: package addition/deletion/searching e.g. by pattern  
 Repository object try to do not (use repodata) but store some related metadata: cached package list, baseurl, name, etc  
 Repository (opposite from *createrepo* utility) save metadata type between rebuilds  
+Repository try to reuse packages and made to support such behaviour  
+It can `assimilate` side package to expand it sources with own  
+Also it try to do not re-create packages that adds to repository bu re-use objects.
 
 #### Package
 Single abstract RPM Package  
