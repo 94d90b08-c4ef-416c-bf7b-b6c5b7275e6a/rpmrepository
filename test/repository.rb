@@ -72,9 +72,7 @@ describe 'RPM Repository creation' do
             
             it 'should be added to repository' do
                 File.file?(@victim_location.path).must_equal true
-                @repository.get_packages_list.select { |pkg|
-                    pkg.get_local_uris_undo(@repository.base_dir.path).first == @victim_location
-                }.wont_be_empty
+                (@repository.get_packages_list.include? @victim).must_equal true
             end
             
             it 'should be alone' do
@@ -82,11 +80,35 @@ describe 'RPM Repository creation' do
             end
             
             it 'should not be alien' do
-                @repository.contains? @victim
+                (@repository.contains? @victim).must_equal true
             end
             
             it 'should be in repository' do
-                (@repository.get_own(@victim_copy).same_as? @victim).must_equal true
+                (@repository.send(:get_own, @victim_copy).same_as? @victim).must_equal true
+            end
+            
+            describe 'package assimilation' do
+              before do
+                @side_package = RPM::Package.new @victim.get_remote_uris.first
+                @alien_package = RPM::Package.new (@packages - [@victim]).sample.get_remote_uris.first
+                (@repository.contains? @side_package).must_equal true
+                (@repository.contains? @alien_package).must_equal false
+              end
+              
+              it 'should assimilate the same' do
+                (@repository.assimilate! @side_package).must_equal true
+                @side_package.uris.count.must_equal 2
+                (@repository.get_packages_list.include? @side_package).must_equal true
+                (@repository.get_packages_list.include? @victim).must_equal false
+              end
+              
+              it 'should not assimilate aliens' do
+                (@repository.assimilate! @alien_package).must_equal false
+                @alien_package.uris.count.must_equal 1
+                (@repository.get_packages_list.include? @alien_package).must_equal false
+                (@repository.get_packages_list.include? @victim).must_equal true
+              end
+              
             end
             
             describe 'package deletion' do
@@ -123,7 +145,7 @@ describe 'RPM Repository creation' do
             end
             
             it 'should return similar packages' do
-                @repository.get_packages_list.must_equal @repo_packages_list
+                @repository.get_packages_list.must_equal @packages
             end
             
             describe 'dry rebuild' do
@@ -132,7 +154,7 @@ describe 'RPM Repository creation' do
                 end
                 
                 it 'anyway should return similar packages' do
-                    @repository.get_packages_list.must_equal @repo_packages_list
+                    @repository.get_packages_list.must_equal @packages
                 end
             end
             

@@ -38,6 +38,11 @@ describe 'RPM Package' do
         @package.file_size.must_be_instance_of Fixnum
     end
     
+    it 'should has sha1 and sha256 digests' do
+      @package.digests.must_be_instance_of Hash
+      @package.digests.keys.must_equal [:sha1, :sha256]
+    end
+    
     it 'should be the same' do
         (@package.same_as? RPM::Package.new @remote_uri).must_equal true
         (@package.same_as? RPM::Package.new (REMOTE_URIS - [@remote_uri]).sample).must_equal false
@@ -81,6 +86,30 @@ describe 'RPM Package' do
             (File.exist? @package.get_local_uris.first.path).must_equal true
           end
           
+          it 'should raise error on access splitted package' do
+            -> {@package.get_local_uris}.must_raise RuntimeError
+            -> {@package.get_local_uris_undo '/1/2/3'}.must_raise RuntimeError
+            -> {@package.destroy!}.must_raise RuntimeError
+            -> {@package.duplicate_to '/1/2/3'}.must_raise RuntimeError
+          end
+          describe 'workaround' do
+              it 'should be reparable' do
+                begin
+                    @package.get_remote_uris #should raise
+                rescue RuntimeError => e
+                    (@package.repair!).must_equal true
+                end
+              end
+              it 'should be repairable without splitted brain' do
+                prev_uris_count = @package_copy.uris.count
+                @package_copy.repair!.must_equal true
+                prev_uris_count.must_equal @package_copy.uris.count
+              end
+          end
+          
+          after do
+            @package_copy.duplicate_to '.'
+          end
         end
         
         after do
@@ -105,11 +134,13 @@ describe 'RPM Package' do
                 'file:' + @package.get_local_uris.sample.path,
                 ]
         end
+        
         it 'should be creatable by valid URIs' do
             @valid_urls.each { |url|
                 RPM::Package.new(url).must_be_instance_of RPM::Package
             }
         end
+        
         it 'should deduplicate only under specified directory' do
             @package.deduplicate_undo './tmp'
             (File.exist? @package_file_name).must_equal                 true

@@ -43,11 +43,11 @@ private
     }
   end
   
-  #Actually check packages cache: remove aol packges and add new
+  #Actually check packages cache: create new one and fill it with old cache and newly created one
   def refresh_packages_cache
       #save current cache state
       prev_cache = @packages_cache
-      #clean current cache
+      #clean current cache - used by other functions to refresh cache 
       @packages_cache = {}
       @md_content_cache[:primary].each_element('/metadata/package') { |package_md|
         chksum = package_md.elements['checksum'].text
