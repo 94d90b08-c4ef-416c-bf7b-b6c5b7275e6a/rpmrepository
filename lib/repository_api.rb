@@ -76,6 +76,19 @@ module RPM::Repository::API
   def contains? alien_package
     not get_packages_list.select{ |package| package.same_as? alien_package }.empty?
   end
+  alias include? contains?
+  
+  #Try to expand package URIs with own
+  #Return true if package expanded, false otherwise
+  def assimilate! alien_package
+    if contains? alien_package
+      alien_package.join! get_own(alien_package)
+      synchronize { @packages_cache[alien_package.digests[get_checksum_type.to_sym]] = alien_package }
+      return true
+    else
+      return false
+    end
+  end
   
   #Remove repository files
   def destroy!
@@ -116,7 +129,14 @@ module RPM::Repository::API
     synchronize { validate_packages_cache && get_packages_from_cache }
   end
   
+  #Public and safe realization of rebuilding - just rebuild repository
+  def rebuild
+    rebuild_with
+  end
+private
+  
   #Return Package from current repository
+  #Method not public because it brings packages split-brain (two same package into runtime)
   def get_own package
     same_packages = get_packages_list.select { |repo_package| repo_package.same_as? package }
     case same_packages.count
@@ -127,11 +147,6 @@ module RPM::Repository::API
     else
       raise RuntimeError, "More than one #{package.get_default_name} package in repository"
     end
-  end
-  
-  #Public and safe realization of rebuilding - just rebuild repository
-  def rebuild
-    rebuild_with
   end
   
 end

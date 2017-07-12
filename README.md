@@ -36,7 +36,7 @@ Repository (opposite from *createrepo* utility) save metadata type between rebui
 
 #### Package
 Single abstract RPM Package  
-It has some attributes, may be available locally or remote or not  
+It has some attributes, may be available locally or remote  
 May has many source URIs  
 It may be duplicated in local directory after creation with http uri  
 With such abstract model it can be: created with some source uri than duplicated undo repository  
@@ -61,5 +61,4 @@ TODO aka known issues
 - add repository locking (for other processes)
 - add parallel tests
 - safe destroyed repository from acts
-- add RPM::Repository.assimilate (join package with repositoried one if exist)
 - suppose 2 RPM::Package has similar local source(s) URI(s). One is destroyed. What about another?
